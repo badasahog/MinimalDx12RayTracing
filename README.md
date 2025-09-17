@@ -1,6 +1,7 @@
 Simple DirectX 12 ray tracer written in C.
 
 Based on the official Microsoft ray tracing sample:
+
 https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/Samples/Desktop/D3D12Raytracing/src/D3D12RaytracingProceduralGeometry
 
 This is also where I got the RT shader from, although I can't seem to compile it correctly.
