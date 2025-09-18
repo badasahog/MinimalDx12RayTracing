@@ -89,9 +89,9 @@ inline void THROW_ON_FAIL_IMPL(HRESULT hr, int line)
 
 #define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
 
-inline UINT RoundToMultiple(UINT size, UINT alignment)
+inline UINT RoundToMultiple(UINT Size, UINT Alignment)
 {
-	return (size + (alignment - 1)) & ~(alignment - 1);
+	return (Size + (Alignment - 1)) & ~(Alignment - 1);
 }
 
 static const bool bWarp = false;
@@ -306,8 +306,8 @@ void UpdateCameraMatrices(struct DxObjects* DxObjects, float AspectRatio, vec4 E
 	glm_lookat_lh(EyeVector, AtVector, UpVector, ViewMatrix);
 
 	mat4 ProjectionMatrix;
-	static const float fovAngleY = 45.0f;
-	glm_perspective_lh_zo(glm_rad(fovAngleY), AspectRatio, 0.01f, 125.0f, ProjectionMatrix);
+	static const float FOV_ANGLE_Y = 45.0f;
+	glm_perspective_lh_zo(glm_rad(FOV_ANGLE_Y), AspectRatio, 0.01f, 125.0f, ProjectionMatrix);
 
 	mat4 ViewProjMatrix;
 	glm_mat4_mul(ProjectionMatrix, ViewMatrix, ViewProjMatrix);
@@ -718,10 +718,10 @@ int main()
 		RootSignatureDesc.pStaticSamplers = NULL;
 		RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 			
-		ID3D10Blob* Blob;
-		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Blob, NULL));
-		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Blob), ID3D10Blob_GetBufferSize(Blob), &IID_ID3D12RootSignature, &DxObjects.RaytracingGlobalRootSignature));
-		ID3D10Blob_Release(Blob);
+		ID3D10Blob* Signature;
+		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Signature, NULL));
+		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Signature), ID3D10Blob_GetBufferSize(Signature), &IID_ID3D12RootSignature, &DxObjects.RaytracingGlobalRootSignature));
+		ID3D10Blob_Release(Signature);
 	}
 
 	// Local Root Signature
@@ -744,10 +744,10 @@ int main()
 		RootSignatureDesc.pStaticSamplers = NULL;
 		RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
 
-		ID3D10Blob* Blob;
-		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Blob, NULL));
-		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Blob), ID3D10Blob_GetBufferSize(Blob), &IID_ID3D12RootSignature, &RaytracingLocalRootSignature[ROOTSIG_TYPE_TRIANGLE]));
-		ID3D10Blob_Release(Blob);
+		ID3D10Blob* Signature;
+		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Signature, NULL));
+		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Signature), ID3D10Blob_GetBufferSize(Signature), &IID_ID3D12RootSignature, &RaytracingLocalRootSignature[ROOTSIG_TYPE_TRIANGLE]));
+		ID3D10Blob_Release(Signature);
 	}
 
 	{
@@ -771,10 +771,10 @@ int main()
 		RootSignatureDesc.pStaticSamplers = NULL;
 		RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
 
-		ID3D10Blob* Blob;
-		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Blob, NULL));
-		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Blob), ID3D10Blob_GetBufferSize(Blob), &IID_ID3D12RootSignature, &RaytracingLocalRootSignature[ROOTSIG_TYPE_AABB]));
-		ID3D10Blob_Release(Blob);
+		ID3D10Blob* Signature;
+		THROW_ON_FAIL(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Signature, NULL));
+		THROW_ON_FAIL(ID3D12Device10_CreateRootSignature(Device, 1, ID3D10Blob_GetBufferPointer(Signature), ID3D10Blob_GetBufferSize(Signature), &IID_ID3D12RootSignature, &RaytracingLocalRootSignature[ROOTSIG_TYPE_AABB]));
+		ID3D10Blob_Release(Signature);
 	}
 
 	{
@@ -1204,18 +1204,16 @@ int main()
 		// Note: When rays encounter opaque geometry an any hit shader will not be executed whether it is present or not.
 
 		// Triangle geometry desc
-		{
-			// Triangle bottom-level AS contains a single plane geometry.
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexBuffer = ID3D12Resource_GetGPUVirtualAddress(IndexBufferResource);
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexCount = ARRAYSIZE(Indices);
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexCount = ARRAYSIZE(Vertices);
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexBuffer.StartAddress = ID3D12Resource_GetGPUVirtualAddress(VertexBufferResource);
-			GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexBuffer.StrideInBytes = sizeof(struct Vertex);
-		}
+		// Triangle bottom-level AS contains a single plane geometry.
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexBuffer = ID3D12Resource_GetGPUVirtualAddress(IndexBufferResource);
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexCount = ARRAYSIZE(Indices);
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexCount = ARRAYSIZE(Vertices);
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexBuffer.StartAddress = ID3D12Resource_GetGPUVirtualAddress(VertexBufferResource);
+		GeometryDescs[GEOMETRY_TYPE_TRIANGLE].Ptr[0].Triangles.VertexBuffer.StrideInBytes = sizeof(struct Vertex);
 
 		// AABB geometry desc
 		{
@@ -1250,6 +1248,11 @@ int main()
 			assert(BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
 
 			{
+				D3D12_HEAP_PROPERTIES HeapProperties = { 0 };
+				HeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+				HeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+				HeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
 				D3D12_RESOURCE_DESC1 ResourceDesc = { 0 };
 				ResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 				ResourceDesc.Alignment = 0;
@@ -1262,11 +1265,6 @@ int main()
 				ResourceDesc.SampleDesc.Quality = 0;
 				ResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 				ResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-				D3D12_HEAP_PROPERTIES HeapProperties = { 0 };
-				HeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-				HeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-				HeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
 				THROW_ON_FAIL(ID3D12Device10_CreateCommittedResource3(
 					Device,
@@ -2025,6 +2023,8 @@ int main()
 	THROW_ON_FAIL(ID3D12Debug6_Release(DebugController));
 #endif
 
+	THROW_ON_FALSE(CloseHandle(DxObjects.FenceEvent));
+
 	THROW_ON_FALSE(UnregisterClassW(WindowClassName, Instance));
 
 	THROW_ON_FALSE(DestroyCursor(Cursor));
@@ -2197,32 +2197,32 @@ LRESULT CALLBACK WindowProc(HWND Window, UINT message, WPARAM wParam, LPARAM lPa
 				
 		{
 			static int CyclicTimerFrameCount = 0;
-			static double prevTime = 0.0f;
-			double totalTime = (double)TotalTicks / TICKS_PER_SECOND;
+			static double PrevTime = 0.0f;
+			double TotalTime = (double)TotalTicks / TICKS_PER_SECOND;
 			CyclicTimerFrameCount++;
 
-			if ((totalTime - prevTime) >= 1.0f)
+			if ((TotalTime - PrevTime) >= 1.0f)
 			{
-				float diff = (float)(totalTime - prevTime);
-				float fps = (float)CyclicTimerFrameCount / diff;
+				float Diff = (float)(TotalTime - PrevTime);
+				float Fps = (float)CyclicTimerFrameCount / Diff;
 
 				CyclicTimerFrameCount = 0;
-				prevTime = totalTime;
-				float raytracingTime = (float)(*GpuTimers)[GPU_TIMER_RAYTRACING].Avg[0];
+				PrevTime = TotalTime;
+				float RaytracingTime = (*GpuTimers)[GPU_TIMER_RAYTRACING].Avg[0];
 
 				float MRaysPerSecond;
 
 				{
-					float resolutionMRays = (float)(WindowWidth * WindowHeight);
-					float raytracingTimeInSeconds = 0.001f * raytracingTime;
-					MRaysPerSecond = resolutionMRays / (raytracingTimeInSeconds * 1e+6f);
+					float ResolutionMRays = WindowWidth * WindowHeight;
+					float RaytracingTimeInSeconds = 0.001f * RaytracingTime;
+					MRaysPerSecond = ResolutionMRays / (RaytracingTimeInSeconds * 1e+6f);
 				}
 
 				wchar_t WindowText[256];
 
 				_snwprintf_s(WindowText, ARRAYSIZE(WindowText), _TRUNCATE,
 					L"D3D12 Raytracing - Procedural Geometry:     fps: %.2f    DispatchRays(): %.2fms     ~Million Primary Rays/s: %.2f",
-					fps, raytracingTime, MRaysPerSecond);
+					Fps, RaytracingTime, MRaysPerSecond);
 
 				SetWindowTextW(Window, WindowText);
 			}
